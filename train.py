@@ -62,14 +62,14 @@ def train(hyp, opt, device, tb_writer=None):
         with torch_distributed_zero_first(rank):
             attempt_download(weights)  # download if not found locally
         ckpt = torch.load(weights, map_location=device)  # load checkpoint
-        model = Model(opt.cfg or ckpt['model'].yaml, ch=3, nc=nc).to(device)  # create
+        model = Model(opt.cfg or ckpt['model'].yaml, ch=8, nc=nc).to(device)  # create
         exclude = ['anchor'] if opt.cfg else []  # exclude keys
         state_dict = ckpt['model'].float().state_dict()  # to FP32
         state_dict = intersect_dicts(state_dict, model.state_dict(), exclude=exclude)  # intersect
         model.load_state_dict(state_dict, strict=False)  # load
         print('Transferred %g/%g items from %s' % (len(state_dict), len(model.state_dict()), weights))  # report
     else:
-        model = Model(opt.cfg, ch=3, nc=nc).to(device)# create
+        model = Model(opt.cfg, ch=8, nc=nc).to(device)# create
         #model = model.to(memory_format=torch.channels_last)  # create
 
     # Optimizer
@@ -286,7 +286,7 @@ def train(hyp, opt, device, tb_writer=None):
                 # Plot
                 if ni < 3:
                     f = str(log_dir / ('train_batch%g.jpg' % ni))  # filename
-                    result = plot_images(images=imgs, targets=targets, paths=paths, fname=f)
+                    result = plot_images(images=imgs[:,-3:,:,:], targets=targets, paths=paths, fname=f)
                     if tb_writer and result is not None:
                         tb_writer.add_image(f, result, dataformats='HWC', global_step=epoch)
                         # tb_writer.add_graph(model, imgs)  # add model to tensorboard
@@ -517,3 +517,4 @@ if __name__ == '__main__':
         plot_evolution(yaml_file)
         print('Hyperparameter evolution complete. Best results saved as: %s\nCommand to train a new model with these '
               'hyperparameters: $ python train.py --hyp %s' % (yaml_file, yaml_file))
+
